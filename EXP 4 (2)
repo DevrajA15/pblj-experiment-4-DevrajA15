@@ -1,0 +1,82 @@
+2.  import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+class TicketBookingSystem {
+    private final int totalSeats;
+    private int availableSeats;
+    private final Lock lock = new ReentrantLock();
+
+    public TicketBookingSystem(int totalSeats) {
+        this.totalSeats = totalSeats;
+        this.availableSeats = totalSeats;
+    }
+
+    public void bookTicket(String customerType) {
+        lock.lock();
+        try {
+            if (availableSeats > 0) {
+                System.out.println(customerType + " booked a seat. Seats left: " + (availableSeats - 1));
+                availableSeats--;
+            } else {
+                System.out.println("No seats available for " + customerType);
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public int getAvailableSeats() {
+        return availableSeats;
+    }
+}
+
+class BookingThread extends Thread {
+    private final TicketBookingSystem bookingSystem;
+    private final String customerType;
+
+    public BookingThread(TicketBookingSystem bookingSystem, String customerType) {
+        this.bookingSystem = bookingSystem;
+        this.customerType = customerType;
+    }
+
+    @Override
+    public void run() {
+        bookingSystem.bookTicket(customerType);
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        TicketBookingSystem bookingSystem = new TicketBookingSystem(10); // 10 total seats
+
+        // Create VIP booking threads
+        BookingThread vip1 = new BookingThread(bookingSystem, "VIP Customer 1");
+        BookingThread vip2 = new BookingThread(bookingSystem, "VIP Customer 2");
+        BookingThread regular1 = new BookingThread(bookingSystem, "Regular Customer 1");
+        BookingThread regular2 = new BookingThread(bookingSystem, "Regular Customer 2");
+
+        // Set thread priorities for VIP customers
+        vip1.setPriority(Thread.MAX_PRIORITY);
+        vip2.setPriority(Thread.MAX_PRIORITY);
+        regular1.setPriority(Thread.NORM_PRIORITY);
+        regular2.setPriority(Thread.NORM_PRIORITY);
+
+        // Start the threads
+        vip1.start();
+        vip2.start();
+        regular1.start();
+        regular2.start();
+
+        // Wait for all threads to finish
+        try {
+            vip1.join();
+            vip2.join();
+            regular1.join();
+            regular2.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        System.out.println("Booking process completed. Available seats: " + bookingSystem.getAvailableSeats());
+    }
+}
